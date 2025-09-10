@@ -88,7 +88,7 @@ class MatrixVisual(VisualBase):
         
         # Generate frame buffer
         frame_buffer = [[' ' for _ in range(width)] for _ in range(height)]
-        color_buffer = [['black' for _ in range(width)] for _ in range(height)]
+        color_buffer = [['' for _ in range(width)] for _ in range(height)]
         
         # Render background drops first
         self._render_drops(self.background_drops, frame_buffer, color_buffer, width, height, True)
