@@ -17,7 +17,7 @@ class VisualRunner:
         self.loader = VisualLoader(visuals_dir)
         self.current_visual_index = 0
         self.frame_count = 0
-        self.pattern_duration = 150  # frames per visual
+        self.pattern_duration = 500  # frames per visual
         
     def run(self):
         try:
