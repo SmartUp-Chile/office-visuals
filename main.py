@@ -62,9 +62,18 @@ class VisualRunner:
                     for row in pattern:
                         frame_buffer.append(row)
                     
-                    # Status info
+                    # Status info with right alignment
                     meta = current_visual.get_metadata()
-                    status = f"{rgb_to_ansi(255, 255, 0)}🎨 {meta['name']} by {meta['author']} | Frame: {self.frame_count} | Press Ctrl+C to exit{reset_color()}"
+                    left_text = f"{rgb_to_ansi(200, 150, 255)}🎨 {meta['name']} by {meta['author']}{reset_color()}"
+                    right_text = f"{rgb_to_ansi(255, 180, 220)}Frame: {self.frame_count} | Press Ctrl+C to exit{reset_color()}"
+                    
+                    # Calculate padding for right alignment
+                    # Account for ANSI color codes by counting visible characters only
+                    left_visible = len(f"🎨 {meta['name']} by {meta['author']}")
+                    right_visible = len(f"Frame: {self.frame_count} | Press Ctrl+C to exit")
+                    padding = max(0, width - left_visible - right_visible)
+                    
+                    status = left_text + " " * padding + right_text
                     frame_buffer.append(status)
                     
                     # Display entire frame
