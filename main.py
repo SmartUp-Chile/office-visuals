@@ -36,7 +36,7 @@ class VisualRunner:
             
             # Get terminal size once
             width, height = get_terminal_size()
-            height -= 2  # Reserve space for status
+            height -= 1  # Reserve space for status line only
             
             while True:
                 current_visual = visuals[self.current_visual_index]
@@ -44,10 +44,11 @@ class VisualRunner:
                 
                 # Switch visuals periodically
                 if self.frame_count > 0 and self.frame_count % self.pattern_duration == 0:
+                    # Clear screen for smooth transition
+                    from core.utils import clear_screen
+                    clear_screen()
                     self.current_visual_index = (self.current_visual_index + 1) % len(visuals)
                     current_visual = visuals[self.current_visual_index]
-                    print(f"\n🔄 Switching to: {current_visual.get_metadata()['name']}")
-                    time.sleep(1)
                 
                 # Move cursor to top without clearing
                 move_cursor_home()
@@ -63,7 +64,7 @@ class VisualRunner:
                     
                     # Status info
                     meta = current_visual.get_metadata()
-                    status = f"\n{rgb_to_ansi(255, 255, 0)}🎨 {meta['name']} by {meta['author']} | Frame: {self.frame_count} | Press Ctrl+C to exit{reset_color()}"
+                    status = f"{rgb_to_ansi(255, 255, 0)}🎨 {meta['name']} by {meta['author']} | Frame: {self.frame_count} | Press Ctrl+C to exit{reset_color()}"
                     frame_buffer.append(status)
                     
                     # Display entire frame
