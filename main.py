@@ -12,27 +12,47 @@ from core.utils import get_terminal_size, hide_cursor, show_cursor, move_cursor_
 class VisualRunner:
     """Main runner that displays visuals in rotation"""
     
-    def __init__(self):
+    def __init__(self, single_visual=None):
         visuals_dir = os.path.join(os.path.dirname(__file__), 'visuals')
         self.loader = VisualLoader(visuals_dir)
         self.current_visual_index = 0
         self.frame_count = 0
         self.pattern_duration = 500  # frames per visual
+        self.single_visual = single_visual
         
     def run(self):
         try:
-            visuals = list(self.loader.get_all_visuals().values())
+            all_visuals = self.loader.get_all_visuals()
+            
+            if self.single_visual:
+                # Run single visual mode
+                if self.single_visual not in all_visuals:
+                    print(f"❌ Visual '{self.single_visual}' not found!")
+                    print("Available visuals:")
+                    for name in all_visuals.keys():
+                        print(f"  • {name}")
+                    return
+                visuals = [all_visuals[self.single_visual]]
+            else:
+                # Run slideshow mode
+                visuals = list(all_visuals.values())
+                
             if not visuals:
                 print("❌ No visuals found! Add some .py files to the visuals/ directory.")
                 return
             
             # Welcome message
             hide_cursor()
-            print("🌈 OFFICE VISUAL SYSTEM 🌈")
-            print(f"Found {len(visuals)} visuals:")
-            self.loader.list_visuals()
-            print("\nPress Ctrl+C to exit\n")
-            time.sleep(3)
+            if self.single_visual:
+                print(f"🌈 RUNNING SINGLE VISUAL: {visuals[0].get_metadata()['name']} 🌈")
+                print("Press Ctrl+C to exit\n")
+                time.sleep(2)
+            else:
+                print("🌈 OFFICE VISUAL SYSTEM 🌈")
+                print(f"Found {len(visuals)} visuals:")
+                self.loader.list_visuals()
+                print("\nPress Ctrl+C to exit\n")
+                time.sleep(3)
             
             # Get terminal size once
             width, height = get_terminal_size()
@@ -42,8 +62,8 @@ class VisualRunner:
                 current_visual = visuals[self.current_visual_index]
                 time_offset = self.frame_count * 0.08
                 
-                # Switch visuals periodically
-                if self.frame_count > 0 and self.frame_count % self.pattern_duration == 0:
+                # Switch visuals periodically (only if not running single visual)
+                if not self.single_visual and self.frame_count > 0 and self.frame_count % self.pattern_duration == 0:
                     # Clear screen for smooth transition
                     from core.utils import clear_screen
                     clear_screen()
@@ -103,12 +123,22 @@ def main():
             loader = VisualLoader(visuals_dir)
             loader.list_visuals()
             return
+        elif sys.argv[1] == '--single':
+            if len(sys.argv) < 3:
+                print("❌ Please specify a visual name after --single")
+                print("Use --list to see available visuals")
+                return
+            visual_name = sys.argv[2]
+            runner = VisualRunner(single_visual=visual_name)
+            runner.run()
+            return
         elif sys.argv[1] == '--help':
             print("Office Visual System")
             print("Usage:")
-            print("  python main.py          - Run visual slideshow")
-            print("  python main.py --list   - List available visuals")
-            print("  python main.py --help   - Show this help")
+            print("  python main.py                    - Run visual slideshow")
+            print("  python main.py --list             - List available visuals")
+            print("  python main.py --single <name>    - Run single visual continuously")
+            print("  python main.py --help             - Show this help")
             return
     
     runner = VisualRunner()
