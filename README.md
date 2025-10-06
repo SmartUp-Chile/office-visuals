@@ -26,10 +26,13 @@ A professional, modular terminal visual effects system for the office.
 
 ## Current Visuals
 
-- **Ocean Waves** by sat - Flowing wave patterns with rainbow colors
-- **Hypnotic Spiral** by sat - Mesmerizing spiral patterns radiating from center  
-- **Plasma Field** by sat - Classic plasma effect with flowing rainbow colors
+- **Aurora Ascension** by sat with agent window - Trippy aurora borealis patterns ascending upward with hopeful, exciting particle effects
+- **Bouncing SmartUp** by Pablo - Purple double chevron bouncing around like the classic DVD logo with sparkle trails
 - **Digital Matrix Pro** by sat - Professional Matrix digital rain with multi-layered effects and realistic falling code
+- **Hyperbolic Purple** by sat - Flowing hyperbolic patterns with sophisticated purple gradients
+- **Plasma Field** by sat - Classic plasma effect with flowing rainbow colors
+- **Hypnotic Spiral** by sat - Mesmerizing spiral patterns radiating from center
+- **Möbius Strip** by sat - Elegant möbius strip transformation with smooth color transitions
 
 ## Adding New Visuals
 
@@ -68,10 +71,14 @@ Office/
     │   ├── loader.py        # Auto-discovery system
     │   └── utils.py         # Shared utilities
     └── visuals/
-        ├── waves.py         # Ocean Waves
-        ├── spiral.py        # Hypnotic Spiral
-        ├── plasma.py        # Plasma Field
-        └── matrix.py        # Digital Matrix
+        ├── aurora_ascension.py  # Aurora Ascension
+        ├── bouncing_chevron.py  # Bouncing SmartUp
+        ├── dj_set.py           # DJ Set Visual
+        ├── hyperbolic_purple.py # Hyperbolic Purple
+        ├── matrix.py           # Digital Matrix Pro
+        ├── mobius.py           # Möbius Strip
+        ├── plasma.py           # Plasma Field
+        └── spiral.py           # Hypnotic Spiral
 ```
 
 ## Requirements
