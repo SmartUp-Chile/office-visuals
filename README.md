@@ -29,6 +29,7 @@ A professional, modular terminal visual effects system for the office.
 - **Aurora Ascension** by sat with agent window - Trippy aurora borealis patterns ascending upward with hopeful, exciting particle effects
 - **Bouncing SmartUp** by Pablo - Purple double chevron bouncing around like the classic DVD logo with sparkle trails
 - **Digital Matrix Pro** by sat - Professional Matrix digital rain with multi-layered effects and realistic falling code
+- **Intelligence** by sat - Trippy neural-spiral lattice evoking AGI/ASI emergence
 - **Hyperbolic Purple** by sat - Flowing hyperbolic patterns with sophisticated purple gradients
 - **Plasma Field** by sat - Classic plasma effect with flowing rainbow colors
 - **Hypnotic Spiral** by sat - Mesmerizing spiral patterns radiating from center

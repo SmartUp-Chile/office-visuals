@@ -2,6 +2,7 @@ import math
 import sys
 import os
 import random
+from collections import deque
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from core.visual_base import VisualBase
@@ -13,19 +14,37 @@ class BouncingChevronVisual(VisualBase):
     metadata = {
         "name": "Bouncing SmartUp",
         "author": "Pablo", 
-        "version": "1.0",
-        "description": "Purple double chevron bouncing around like the classic DVD logo"
+        "version": "1.1",
+        "description": "Upward double chevron (SmartUp) with bold neon trail and glow"
     }
     
     def __init__(self):
         self.x = 10.0
         self.y = 5.0
-        self.vel_x = 0.8
-        self.vel_y = 0.4
-        self.chevron_width = 12
-        self.chevron_height = 6
+        self.vel_x = 0.9
+        self.vel_y = 0.5
+        # Upward double-chevron made of two stacked outline triangles
+        # Each triangle height H -> width W = 2H-1
+        self.tri_height = 8
+        self.tri_width = self.tri_height * 2 - 1  # 15
+        # Overlap amount so the lower chevron tip intrudes into the upper
+        self.overlap = max(2, self.tri_height // 3)
+        self.chevron_width = self.tri_width
+        self.chevron_height = self.tri_height * 2 - self.overlap
+        # Debug controls via env vars
+        self.debug_static = os.getenv('VISUAL_DEBUG_STATIC', '0') == '1'
+        try:
+            self.debug_frames = int(os.getenv('VISUAL_DEBUG_FRAMES', '0'))
+        except ValueError:
+            self.debug_frames = 0
+        self.debug_exit = os.getenv('VISUAL_DEBUG_EXIT', '0') == '1'
+        self._frame_counter = 0
+        self._last_pattern = None
         self.color_cycle = 0.0
         self.trail_particles = []
+        # Ribbon trail of past positions (center points)
+        self.history = deque(maxlen=18)
+        self.last_bounce = 0
         
     def get_purple_gradient(self, cycle_time, intensity=1.0):
         """Generate different shades of purple based on cycle time"""
@@ -55,43 +74,109 @@ class BouncingChevronVisual(VisualBase):
     
     def add_trail_particle(self, x, y, intensity):
         """Add sparkle trail particles"""
-        if random.random() < 0.3:  # 30% chance
+        # Higher chance to strengthen trails
+        if random.random() < 0.6:  # 60% chance
             self.trail_particles.append({
                 'x': x + random.uniform(-1, 1),
                 'y': y + random.uniform(-0.5, 0.5),
                 'age': 0,
-                'max_age': random.randint(15, 30),
-                'intensity': intensity * random.uniform(0.5, 1.0),
+                'max_age': random.randint(18, 38),
+                'intensity': min(1.0, intensity * random.uniform(0.6, 1.1)),
                 'color_offset': random.uniform(0, 2 * math.pi)
             })
-    
+
+    def _draw_triangle_up(self, frame_buffer, color_buffer, top_left_x, top_left_y, main_intensity, color_cycle, ghost_level=0, overwrite=False, edge_thickness=1):
+        """Draw a single upward outline triangle (no base line).
+        - Only draw slanted edges, omit bottom row to avoid base.
+        - ghost_level: 0 main, 1 mid, 2 faint (affects char choice)
+        - overwrite: if True, draw even if a cell is occupied (to keep logo above trail)
+        - edge_thickness: thickness of each slanted edge in columns
+        """
+        h = self.tri_height
+        w = self.tri_width
+        for r in range(h):
+            blocks = 1 + 2 * r
+            pad = (w - blocks) // 2
+            # Skip bottom row edges to avoid horizontal base line
+            if r == h - 1:
+                continue
+            # Edge columns in this row
+            left_col = pad
+            right_col = pad + blocks - 1
+            # Thinner tip: single column at the apex
+            local_thickness = 1 if r == 0 else edge_thickness
+            for tcol in range(local_thickness):
+                for c in (left_col + tcol, right_col - tcol):
+                    # Keep within this row's triangle span
+                    if c < pad or c > pad + blocks - 1:
+                        continue
+                    draw_x = top_left_x + c
+                    draw_y = top_left_y + r
+                    if draw_y < 0 or draw_x < 0:
+                        continue
+                    if draw_y >= len(frame_buffer) or draw_x >= len(frame_buffer[0]):
+                        continue
+                    if not overwrite and frame_buffer[draw_y][draw_x] != ' ':
+                        continue
+                    # Character based on ghost level
+                    ch = '█' if ghost_level == 0 else ('▓' if ghost_level == 1 else '▒')
+                    # Color
+                    r8, g8, b8 = self.get_purple_gradient(color_cycle + (r * 0.08 + c * 0.06), main_intensity)
+                    frame_buffer[draw_y][draw_x] = ch
+                    color_buffer[draw_y][draw_x] = rgb_to_ansi(r8, g8, b8)
+                    # Edge sparkles
+                    if random.random() < (0.12 if ghost_level == 0 else 0.05):
+                        self.add_trail_particle(draw_x, draw_y, main_intensity * (0.9 if ghost_level == 0 else 0.5))
+
     def generate_frame(self, width, height, time_offset):
-        # Update position
-        self.x += self.vel_x
-        self.y += self.vel_y
+        # Debug frame counting / freezing
+        self._frame_counter += 1
+        freeze = self.debug_static or (self.debug_frames and self._frame_counter > self.debug_frames)
+        # Update position (unless frozen)
+        if not freeze:
+            self.x += self.vel_x
+            self.y += self.vel_y
         
         # Bounce off walls (like DVD logo)
-        if self.x <= 0 or self.x >= width - self.chevron_width:
-            self.vel_x = -self.vel_x
-            self.x = max(0, min(width - self.chevron_width, self.x))
-            
-        if self.y <= 0 or self.y >= height - self.chevron_height:
-            self.vel_y = -self.vel_y
-            self.y = max(0, min(height - self.chevron_height, self.y))
+        if not freeze:
+            bounced = False
+            if self.x <= 0 or self.x >= width - self.chevron_width:
+                self.vel_x = -self.vel_x
+                self.x = max(0, min(width - self.chevron_width, self.x))
+                bounced = True
+            if self.y <= 0 or self.y >= height - self.chevron_height:
+                self.vel_y = -self.vel_y
+                self.y = max(0, min(height - self.chevron_height, self.y))
+                bounced = True
+            if bounced:
+                # Bounce burst of particles
+                cx = int(self.x + self.chevron_width // 2)
+                cy = int(self.y + self.chevron_height // 2)
+                for _ in range(18):
+                    self.add_trail_particle(cx, cy, 1.0)
         
         # Update color cycle
         self.color_cycle += 0.1
         
-        # Update trail particles
-        for particle in self.trail_particles[:]:
-            particle['age'] += 1
-            if particle['age'] > particle['max_age']:
-                self.trail_particles.remove(particle)
-        
+        # Update trail particles (unless frozen)
+        if not freeze:
+            for particle in self.trail_particles[:]:
+                particle['age'] += 1
+                if particle['age'] > particle['max_age']:
+                    self.trail_particles.remove(particle)
+            # Cap particles to avoid buildup
+            if len(self.trail_particles) > 1200:
+                del self.trail_particles[:len(self.trail_particles) - 1200]
+
         # Create frame buffer
         frame_buffer = [[' ' for _ in range(width)] for _ in range(height)]
         color_buffer = [['' for _ in range(width)] for _ in range(height)]
-        
+
+        # Update ribbon trail history (use chevron center)
+        center_x = self.x + self.chevron_width / 2
+        center_y = self.y + self.chevron_height / 2
+        self.history.append((center_x, center_y))
+
         # Draw trail particles
         for particle in self.trail_particles:
             px, py = int(particle['x']), int(particle['y'])
@@ -102,72 +187,48 @@ class BouncingChevronVisual(VisualBase):
                 if intensity > 0.1:
                     r, g, b = self.get_purple_gradient(
                         self.color_cycle + particle['color_offset'], 
-                        intensity * 0.7
+                        intensity * 0.9
                     )
                     char = '✦' if intensity > 0.6 else '·' if intensity > 0.3 else '.'
                     frame_buffer[py][px] = char
                     color_buffer[py][px] = rgb_to_ansi(r, g, b)
-        
-        # Draw double chevron
+        # Draw ribbon ghost chevrons from history (thicker, visible trail)
+        # Draw older positions first (fainter), skip every 2 for spacing
+        if len(self.history) > 3:
+            hist = list(self.history)[:-1]
+            steps = 8
+            # Sample up to 'steps' positions spaced through history
+            for i, (hx, hy) in enumerate(hist[::max(1, len(hist)//steps)]):
+                # Fainter for older
+                age_factor = (i + 1) / (min(steps, len(hist)))
+                intensity = 0.22 + 0.38 * (1.0 - age_factor)
+                top_left_x = int(hx - self.chevron_width / 2)
+                top_left_y = int(hy - self.chevron_height / 2)
+                # Upper triangle
+                self._draw_triangle_up(frame_buffer, color_buffer, top_left_x, top_left_y, intensity, self.color_cycle - age_factor * 0.6, ghost_level=2)
+                # Lower triangle (stacked)
+                self._draw_triangle_up(frame_buffer, color_buffer, top_left_x, top_left_y + self.tri_height + max(0, 1 - self.overlap), intensity * 0.95, self.color_cycle - age_factor * 0.6, ghost_level=2)
+
+        # Draw main double up-chevron (draw last, overwrite trail/ghost)
         chevron_x = int(self.x)
         chevron_y = int(self.y)
-        
-        # First chevron (>>)
-        chevron_pattern_1 = [
-            "  ██    ██",
-            " ████  ████",
-            "█████████████", 
-            " ████  ████",
-            "  ██    ██"
-        ]
-        
-        # Second chevron (slightly offset for double effect)  
-        chevron_pattern_2 = [
-            "    ██    ██  ",
-            "   ████  ████ ",
-            "  █████████████",
-            "   ████  ████ ",
-            "    ██    ██  "
-        ]
-        
-        # Draw both chevrons with different purple shades
-        for pattern_idx, pattern in enumerate([chevron_pattern_1, chevron_pattern_2]):
-            offset_x = pattern_idx * 2
-            offset_y = pattern_idx
-            
-            for row_idx, row in enumerate(pattern):
-                for col_idx, char in enumerate(row):
-                    draw_x = chevron_x + col_idx + offset_x
-                    draw_y = chevron_y + row_idx + offset_y
-                    
-                    if (0 <= draw_x < width and 0 <= draw_y < height and 
-                        char != ' ' and frame_buffer[draw_y][draw_x] == ' '):
-                        
-                        # Different intensity for each chevron layer
-                        intensity = 1.0 if pattern_idx == 0 else 0.8
-                        
-                        # Get purple color for this position and time
-                        color_offset = pattern_idx * 0.5 + (col_idx + row_idx) * 0.1
-                        r, g, b = self.get_purple_gradient(
-                            self.color_cycle + color_offset, 
-                            intensity
-                        )
-                        
-                        # Use different characters for visual depth
-                        if char == '█':
-                            display_char = '█' if pattern_idx == 0 else '▓'
-                        else:
-                            display_char = char
-                        
-                        frame_buffer[draw_y][draw_x] = display_char
-                        color_buffer[draw_y][draw_x] = rgb_to_ansi(r, g, b)
-                        
-                        # Add trail particles from chevron edges
-                        if random.random() < 0.05:  # Low chance for performance
-                            self.add_trail_particle(draw_x, draw_y, intensity * 0.6)
-        
+        self._draw_triangle_up(
+            frame_buffer, color_buffer, chevron_x, chevron_y,
+            1.0, self.color_cycle, ghost_level=0, overwrite=True, edge_thickness=2
+        )
+        # Second chevron slightly intruding upwards into the first
+        second_y = chevron_y + self.tri_height - self.overlap
+        self._draw_triangle_up(
+            frame_buffer, color_buffer, chevron_x, second_y,
+            0.95, self.color_cycle + 0.3, ghost_level=0, overwrite=True, edge_thickness=2
+        )
+
+        # If debug requires exiting after N frames, do it after drawing
+        if self.debug_exit and self.debug_frames and self._frame_counter >= self.debug_frames:
+            raise SystemExit(0)
+
         # Add subtle glow effect around chevron
-        glow_radius = 3
+        glow_radius = 4
         for dy in range(-glow_radius, glow_radius + 1):
             for dx in range(-glow_radius, glow_radius + 1):
                 glow_x = chevron_x + self.chevron_width // 2 + dx
@@ -178,7 +239,7 @@ class BouncingChevronVisual(VisualBase):
                     
                     distance = math.sqrt(dx*dx + dy*dy)
                     if distance <= glow_radius:
-                        glow_intensity = max(0, (glow_radius - distance) / glow_radius) * 0.2
+                        glow_intensity = max(0, (glow_radius - distance) / glow_radius) * 0.3
                         
                         if glow_intensity > 0.05:
                             r, g, b = self.get_purple_gradient(self.color_cycle, glow_intensity)
@@ -186,7 +247,7 @@ class BouncingChevronVisual(VisualBase):
                             color_buffer[glow_y][glow_x] = rgb_to_ansi(r, g, b)
         
         # Add some sparkles around the screen for ambiance
-        sparkle_count = 8
+        sparkle_count = 12
         for i in range(sparkle_count):
             sparkle_x = int((math.sin(time_offset * 0.5 + i * 0.8) * 0.4 + 0.5) * width)
             sparkle_y = int((math.cos(time_offset * 0.3 + i * 1.2) * 0.4 + 0.5) * height)
@@ -194,7 +255,7 @@ class BouncingChevronVisual(VisualBase):
             if (0 <= sparkle_x < width and 0 <= sparkle_y < height and 
                 frame_buffer[sparkle_y][sparkle_x] == ' '):
                 
-                sparkle_intensity = (math.sin(time_offset * 2 + i) * 0.3 + 0.7) * 0.4
+                sparkle_intensity = (math.sin(time_offset * 2 + i) * 0.3 + 0.7) * 0.55
                 if sparkle_intensity > 0.2:
                     r, g, b = self.get_purple_gradient(
                         self.color_cycle + i * 0.7, 
