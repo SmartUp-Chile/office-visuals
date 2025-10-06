@@ -132,12 +132,55 @@ def main():
             runner = VisualRunner(single_visual=visual_name)
             runner.run()
             return
+        elif sys.argv[1].startswith('--debug'):
+            # Debug: render a single frame of a specific visual
+            # Usage: main.py --debug[=N] <visual name>
+            # Examples:
+            #   ./run_visuals --debug "Bouncing SmartUp"      -> frame 0
+            #   ./run_visuals --debug=12 "Bouncing SmartUp"    -> frame 12
+            arg = sys.argv[1]
+            if '=' in arg:
+                try:
+                    frame_index = int(arg.split('=', 1)[1])
+                except ValueError:
+                    print("❌ Invalid --debug value. Use an integer, e.g., --debug=12")
+                    return
+            else:
+                frame_index = 0
+
+            if len(sys.argv) < 3:
+                print("❌ Please specify a visual name after --debug")
+                print("Use --list to see available visuals")
+                return
+
+            visual_name = sys.argv[2]
+            visuals_dir = os.path.join(os.path.dirname(__file__), 'visuals')
+            loader = VisualLoader(visuals_dir)
+            all_visuals = loader.get_all_visuals()
+            if visual_name not in all_visuals:
+                print(f"❌ Visual '{visual_name}' not found!")
+                print("Available visuals:")
+                for name in all_visuals.keys():
+                    print(f"  • {name}")
+                return
+
+            visual = all_visuals[visual_name]
+            width, height = get_terminal_size()
+            height -= 1
+            time_offset = frame_index * 0.08
+            try:
+                pattern = visual.generate_frame(width, height, time_offset)
+                print('\n'.join(pattern))
+            except Exception as e:
+                print(f"❌ Error in visual {visual.get_metadata().get('name', visual_name)}: {e}")
+            return
         elif sys.argv[1] == '--help':
             print("Office Visual System")
             print("Usage:")
             print("  python main.py                    - Run visual slideshow")
             print("  python main.py --list             - List available visuals")
             print("  python main.py --single <name>    - Run single visual continuously")
+            print("  python main.py --debug[=N] <name> - Print a single frame N (default 0)")
             print("  python main.py --help             - Show this help")
             return
     

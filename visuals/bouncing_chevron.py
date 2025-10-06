@@ -26,7 +26,9 @@ class BouncingChevronVisual(VisualBase):
         # Upward double-chevron made of two stacked outline triangles
         # Each triangle height H -> width W = 2H-1
         self.tri_height = 8
-        self.tri_width = self.tri_height * 2 - 1  # 15
+        # Wider via slope scaling (keeps 1-pixel apex, widens sides)
+        self.slope_scale = 1.6  # >1 widens horizontally
+        self.tri_width = 2 * int((self.tri_height - 1) * self.slope_scale) + 1
         # Overlap amount so the lower chevron tip intrudes into the upper
         self.overlap = max(2, self.tri_height // 3)
         self.chevron_width = self.tri_width
@@ -40,10 +42,13 @@ class BouncingChevronVisual(VisualBase):
         self.debug_exit = os.getenv('VISUAL_DEBUG_EXIT', '0') == '1'
         self._frame_counter = 0
         self._last_pattern = None
+        # Trail growth controls
+        self.trail_growth_period = 12
+        self.trail_max_thickness = 6  # max edge thickness for ghosts
         self.color_cycle = 0.0
         self.trail_particles = []
         # Ribbon trail of past positions (center points)
-        self.history = deque(maxlen=18)
+        self.history = deque(maxlen=30)
         self.last_bounce = 0
         
     def get_purple_gradient(self, cycle_time, intensity=1.0):
@@ -95,7 +100,7 @@ class BouncingChevronVisual(VisualBase):
         h = self.tri_height
         w = self.tri_width
         for r in range(h):
-            blocks = 1 + 2 * r
+            blocks = 1 + 2 * int(r * self.slope_scale)
             pad = (w - blocks) // 2
             # Skip bottom row edges to avoid horizontal base line
             if r == h - 1:
@@ -132,6 +137,8 @@ class BouncingChevronVisual(VisualBase):
         # Debug frame counting / freezing
         self._frame_counter += 1
         freeze = self.debug_static or (self.debug_frames and self._frame_counter > self.debug_frames)
+        # Derive a frame index estimate from time_offset for deterministic debug
+        frame_index_est = int(time_offset / 0.08 + 0.5)
         # Update position (unless frozen)
         if not freeze:
             self.x += self.vel_x
@@ -204,10 +211,13 @@ class BouncingChevronVisual(VisualBase):
                 intensity = 0.22 + 0.38 * (1.0 - age_factor)
                 top_left_x = int(hx - self.chevron_width / 2)
                 top_left_y = int(hy - self.chevron_height / 2)
+                # Trail edge thickness grows every N frames, capped (based on frame index)
+                ghost_thickness = 1 + min(self.trail_max_thickness - 1, frame_index_est // self.trail_growth_period)
                 # Upper triangle
-                self._draw_triangle_up(frame_buffer, color_buffer, top_left_x, top_left_y, intensity, self.color_cycle - age_factor * 0.6, ghost_level=2)
+                self._draw_triangle_up(frame_buffer, color_buffer, top_left_x, top_left_y, intensity, self.color_cycle - age_factor * 0.6, ghost_level=2, edge_thickness=ghost_thickness, overwrite=True)
                 # Lower triangle (stacked)
-                self._draw_triangle_up(frame_buffer, color_buffer, top_left_x, top_left_y + self.tri_height + max(0, 1 - self.overlap), intensity * 0.95, self.color_cycle - age_factor * 0.6, ghost_level=2)
+                second_y_hist = top_left_y + self.tri_height - self.overlap
+                self._draw_triangle_up(frame_buffer, color_buffer, top_left_x, second_y_hist, intensity * 0.95, self.color_cycle - age_factor * 0.6, ghost_level=2, edge_thickness=ghost_thickness, overwrite=True)
 
         # Draw main double up-chevron (draw last, overwrite trail/ghost)
         chevron_x = int(self.x)
