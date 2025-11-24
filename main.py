@@ -84,12 +84,14 @@ class VisualRunner:
                     
                     # Status info with right alignment
                     meta = current_visual.get_metadata()
-                    left_text = f"{rgb_to_ansi(200, 150, 255)}🎨 {meta['name']} by {meta['author']}{reset_color()}"
+                    ai = meta.get('ai_creator')
+                    ai_suffix = f" and {ai}" if ai else ""
+                    left_text = f"{rgb_to_ansi(200, 150, 255)}🎨 {meta['name']} by {meta['author']}{ai_suffix}{reset_color()}"
                     right_text = f"{rgb_to_ansi(255, 180, 220)}Frame: {self.frame_count} | Press Ctrl+C to exit{reset_color()}"
                     
                     # Calculate padding for right alignment
                     # Account for ANSI color codes by counting visible characters only
-                    left_visible = len(f"🎨 {meta['name']} by {meta['author']}")
+                    left_visible = len(f"🎨 {meta['name']} by {meta['author']}{ai_suffix}")
                     right_visible = len(f"Frame: {self.frame_count} | Press Ctrl+C to exit")
                     padding = max(0, width - left_visible - right_visible)
                     

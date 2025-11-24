@@ -7,7 +7,10 @@ class VisualBase(ABC):
         "name": "Base Visual",
         "author": "sat",
         "version": "1.0",
-        "description": "Base class for visual effects"
+        "description": "Base class for visual effects",
+        # Optional: AI model that assisted/created this visual
+        # If absent or empty, consumers should not display it
+        "ai_creator": None,
     }
     
     @abstractmethod
