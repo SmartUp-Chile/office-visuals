@@ -30,8 +30,11 @@ A professional, modular terminal visual effects system for the office.
 - **Bouncing SmartUp** by Pablo - Purple double chevron bouncing around like the classic DVD logo with sparkle trails
 - **Digital Matrix Pro** by sat - Professional Matrix digital rain with multi-layered effects and realistic falling code
 - **Intelligence** by sat - Trippy neural-spiral lattice evoking AGI/ASI emergence
+- **Fiestas Patrias Chile** by Manu - Animated Chilean flag waving with star effects
+- **Gemini's Awakening** by Sat - A neural core visualization representing AI creativity
 - **Hyperbolic Purple** by sat - Flowing hyperbolic patterns with sophisticated purple gradients
 - **Plasma Field** by sat - Classic plasma effect with flowing rainbow colors
+- **Quantum Ghost** by Sat (Architeched by Gemini) - Strange Attractor Density Cloud - Ethereal & Mathematical
 - **Hypnotic Spiral** by sat - Mesmerizing spiral patterns radiating from center
 - **Möbius Strip** by sat - Elegant möbius strip transformation with smooth color transitions
 
