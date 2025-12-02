@@ -39,9 +39,12 @@ class VisualLoader:
                     obj != VisualBase):
                     
                     visual_instance = obj()
-                    visual_name = visual_instance.get_metadata().get('name', name)
+                    meta = visual_instance.get_metadata()
+                    visual_name = meta.get('name', name)
                     self.visuals[visual_name] = visual_instance
-                    print(f"✓ Loaded visual: {visual_name} by {visual_instance.get_metadata().get('author', 'Unknown')}")
+                    ai = meta.get('ai_creator')
+                    ai_note = f" • AI: {ai}" if ai else ""
+                    print(f"✓ Loaded visual: {visual_name} by {meta.get('author', 'Unknown')}{ai_note}")
         
         except Exception as e:
             print(f"✗ Failed to load {filename}: {e}")
@@ -64,7 +67,11 @@ class VisualLoader:
         for name, visual in self.visuals.items():
             meta = visual.get_metadata()
             print(f"  • {name} v{meta.get('version', '1.0')} - {meta.get('description', 'No description')}")
-            print(f"    Author: {meta.get('author', 'Unknown')}")
+            ai = meta.get('ai_creator')
+            if ai:
+                print(f"    Author: {meta.get('author', 'Unknown')} and {ai}")
+            else:
+                print(f"    Author: {meta.get('author', 'Unknown')}")
     
     def reload_visuals(self):
         """Reload all visuals (useful for development)"""
