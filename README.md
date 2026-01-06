@@ -28,6 +28,7 @@ A professional, modular terminal visual effects system for the office.
 
 - **Aurora Ascension** by sat with agent window - Trippy aurora borealis patterns ascending upward with hopeful, exciting particle effects
 - **Bouncing SmartUp** by Pablo - Purple double chevron bouncing around like the classic DVD logo with sparkle trails
+- **Bad Apple ASCII** by gadana - Auto-downloads the legendary Bad Apple silhouette animation and renders it in ASCII
 - **Digital Matrix Pro** by sat - Professional Matrix digital rain with multi-layered effects and realistic falling code
 - **Intelligence** by sat - Trippy neural-spiral lattice evoking AGI/ASI emergence
 - **Fiestas Patrias Chile** by Manu - Animated Chilean flag waving with star effects
