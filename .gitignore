@@ -50,3 +50,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Visual assets cache
+visuals/assets/badapple/badapple.txt
